@@ -1,1 +1,12 @@
-
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: proofstack
+  namespace: proofstack
+spec:
+  rules:
+    - host: proofstack.local
+  tls:
+    - hosts:
+        - proofstack.local
+      secretName: proofstack-tls
