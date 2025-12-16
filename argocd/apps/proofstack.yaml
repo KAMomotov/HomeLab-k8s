@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: proofstack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/KAMomotov/homelab-k8s.git
+    targetRevision: main
+    path: clusters/rpi-prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: proofstack
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
