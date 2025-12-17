@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: proofstack
+spec:
+  template:
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/kamomotov/proofstack-frontend@sha256:REPLACE_ME
