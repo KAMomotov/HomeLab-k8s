@@ -12,3 +12,6 @@ patches:
       name: proofstack
       namespace: proofstack
     path: patch-ingress-host.json
+
+  - path: patch-api-image.yaml
+  - path: patch-frontend-image.yaml
