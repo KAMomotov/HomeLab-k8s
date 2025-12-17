@@ -1,0 +1,52 @@
+name: Update image digest
+
+on:
+  repository_dispatch:
+    types: [image_published]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate payload
+        run: |
+          echo "app=${{ github.event.client_payload.app }}"
+          echo "digest=${{ github.event.client_payload.digest }}"
+          case "${{ github.event.client_payload.app }}" in
+            api|frontend) ;;
+            *) echo "Unsupported app"; exit 1 ;;
+          esac
+          echo "${{ github.event.client_payload.digest }}" | grep -Eq '^sha256:[0-9a-f]{64}$' || (echo "Bad digest"; exit 1)
+
+      - name: Update patch file
+        run: |
+          APP="${{ github.event.client_payload.app }}"
+          DIGEST="${{ github.event.client_payload.digest }}"
+
+          if [ "$APP" = "api" ]; then
+            FILE="apps/proofstack/overlays/prod/patch-api-image.yaml"
+            IMAGE="ghcr.io/kamomotov/proofstack-api@${DIGEST}"
+          else
+            FILE="apps/proofstack/overlays/prod/patch-frontend-image.yaml"
+            IMAGE="ghcr.io/kamomotov/proofstack-frontend@${DIGEST}"
+          fi
+
+          echo "Updating $FILE -> $IMAGE"
+          # заменяем строку image: ...
+          sed -i -E "s|^\s*image:\s*ghcr\.io/kamomotov/proofstack-${APP}@sha256:[0-9a-f]{64}\s*$|          image: ${IMAGE}|" "$FILE"
+
+          echo "Result:"
+          grep -n "image:" "$FILE"
+
+      - name: Commit & push
+        run: |
+          git config user.name "proofstack-bot"
+          git config user.email "proofstack-bot@users.noreply.github.com"
+          git add apps/proofstack/overlays/prod/patch-*-image.yaml
+          git commit -m "chore(images): bump ${{ github.event.client_payload.app }} to ${{ github.event.client_payload.digest }}" || exit 0
+          git push
