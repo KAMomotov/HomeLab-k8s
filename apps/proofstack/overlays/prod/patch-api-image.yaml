@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: proofstack
+spec:
+  template:
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/kamomotov/proofstack-api@sha256:REPLACE_ME
