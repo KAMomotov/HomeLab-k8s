@@ -8,4 +8,4 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/kamomotov/proofstack-frontend@sha256:2b5a815b41e6717d3738381619a4d4d0ead652c33b51a8d3deb8eb90c5b76aee
+          image: ghcr.io/kamomotov/proofstack-frontend@sha256:9dd72fa0c8aa58220de5ba12d418fcdb784d8754fc19a9e11465e53e666b62a6
