@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  packages: read
 
 jobs:
   update:
@@ -13,31 +14,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate payload
+      - name: Install skopeo
         run: |
-          echo "app=${{ github.event.client_payload.app }}"
-          echo "digest=${{ github.event.client_payload.digest }}"
-          case "${{ github.event.client_payload.app }}" in
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+
+      - name: Resolve payload
+        id: payload
+        env:
+          APP: ${{ github.event.client_payload.app }}
+          DIGEST: ${{ github.event.client_payload.digest }}
+          TAG: ${{ github.event.client_payload.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "app=${APP}"
+          echo "digest=${DIGEST}"
+          echo "tag=${TAG}"
+
+          case "${APP}" in
             api|frontend) ;;
             *) echo "Unsupported app"; exit 1 ;;
           esac
-          echo "${{ github.event.client_payload.digest }}" | grep -Eq '^sha256:[0-9a-f]{64}$' || (echo "Bad digest"; exit 1)
 
-      - name: Update patch file
-        run: |
-          APP="${{ github.event.client_payload.app }}"
-          DIGEST="${{ github.event.client_payload.digest }}"
-
-          if [ "$APP" = "api" ]; then
-            FILE="apps/proofstack/overlays/prod/patch-api-image.yaml"
-            IMAGE="ghcr.io/kamomotov/proofstack-api@${DIGEST}"
+          if [ -n "${DIGEST}" ]; then
+            echo "${DIGEST}" | grep -Eq '^sha256:[0-9a-f]{64}$' || (echo "Bad digest"; exit 1)
           else
-            FILE="apps/proofstack/overlays/prod/patch-frontend-image.yaml"
-            IMAGE="ghcr.io/kamomotov/proofstack-frontend@${DIGEST}"
+            TAG="${TAG:-latest}"
+            IMAGE="ghcr.io/kamomotov/proofstack-${APP}:${TAG}"
+            echo "Resolving digest for ${IMAGE}"
+            DIGEST="$(skopeo inspect --creds "${GITHUB_ACTOR}:${GH_TOKEN}" --format '{{.Digest}}' "docker://${IMAGE}")"
+            echo "${DIGEST}" | grep -Eq '^sha256:[0-9a-f]{64}$' || (echo "Failed to resolve digest"; exit 1)
           fi
 
+          FILE="apps/proofstack/overlays/prod/patch-${APP}-image.yaml"
+          IMAGE="ghcr.io/kamomotov/proofstack-${APP}@${DIGEST}"
+
+          {
+            echo "app=${APP}"
+            echo "digest=${DIGEST}"
+            echo "file=${FILE}"
+            echo "image=${IMAGE}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update patch file
+        env:
+          FILE: ${{ steps.payload.outputs.file }}
+          IMAGE: ${{ steps.payload.outputs.image }}
+          APP: ${{ steps.payload.outputs.app }}
+        run: |
           echo "Updating $FILE -> $IMAGE"
-          # заменяем строку image: ...
           sed -i -E "s|^\s*image:\s*ghcr\.io/kamomotov/proofstack-${APP}@sha256:[0-9a-f]{64}\s*$|          image: ${IMAGE}|" "$FILE"
 
           echo "Result:"
@@ -48,5 +74,5 @@ jobs:
           git config user.name "proofstack-bot"
           git config user.email "proofstack-bot@users.noreply.github.com"
           git add apps/proofstack/overlays/prod/patch-*-image.yaml
-          git commit -m "chore(images): bump ${{ github.event.client_payload.app }} to ${{ github.event.client_payload.digest }}" || exit 0
+          git commit -m "chore(images): bump ${{ steps.payload.outputs.app }} to ${{ steps.payload.outputs.digest }}" || exit 0
           git push
