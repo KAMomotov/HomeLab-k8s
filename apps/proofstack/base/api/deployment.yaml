@@ -29,6 +29,9 @@ spec:
             httpGet:
               path: /api/health
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: proofstack.local
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 2
@@ -38,6 +41,9 @@ spec:
             httpGet:
               path: /api/health
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: proofstack.local
             initialDelaySeconds: 15
             periodSeconds: 20
             timeoutSeconds: 2
