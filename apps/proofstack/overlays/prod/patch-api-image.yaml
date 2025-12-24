@@ -8,4 +8,4 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/kamomotov/proofstack-api@sha256:fa968bf18fe286a2ef00fb82732978331940749187560ea3469ce49852e8ea67
+          image: ghcr.io/kamomotov/proofstack-api@sha256:2340328e0bf56629859b39e09546495111fc1aadaeb62ab7b44b83f50b758648
